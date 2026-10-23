@@ -1,0 +1,85 @@
+#!/usr/bin/python3
+"""Print the mount path of the first usable removable USB filesystem."""
+
+import json
+import subprocess
+import sys
+
+
+LSBLK_FIELDS = "PATH,TYPE,FSTYPE,RM,TRAN,HOTPLUG,MOUNTPOINTS"
+
+
+def read_devices():
+    result = subprocess.run(
+        ["/usr/sbin/lsblk", "-J", "-p", "-o", LSBLK_FIELDS],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    return json.loads(result.stdout).get("blockdevices", [])
+
+
+def flatten(devices, inherited_removable=False, inherited_usb=False):
+    for device in devices:
+        removable = inherited_removable or bool(device.get("rm")) or bool(device.get("hotplug"))
+        usb = inherited_usb or device.get("tran") == "usb"
+        item = dict(device)
+        item["_removable"] = removable
+        item["_usb"] = usb
+        yield item
+        yield from flatten(device.get("children", []), removable, usb)
+
+
+def candidates(devices):
+    usable = []
+    for device in flatten(devices):
+        if not (device["_usb"] or device["_removable"]):
+            continue
+        if device.get("type") not in {"part", "disk"} or not device.get("fstype"):
+            continue
+        if device.get("fstype") == "swap" or not device.get("path"):
+            continue
+        usable.append(device)
+    return sorted(usable, key=lambda item: (item.get("type") != "part", item["path"]))
+
+
+def mountpoint(device):
+    for path in device.get("mountpoints") or []:
+        if path and path.startswith("/"):
+            return path
+    return None
+
+
+def main():
+    devices = candidates(read_devices())
+    if not devices:
+        return 1
+
+    for device in devices:
+        path = mountpoint(device)
+        if path:
+            print(path)
+            return 0
+
+    target = devices[0]["path"]
+    subprocess.run(
+        ["/usr/sbin/udisksctl", "mount", "-b", target],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    for device in candidates(read_devices()):
+        if device["path"] == target:
+            path = mountpoint(device)
+            if path:
+                print(path)
+                return 0
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, subprocess.SubprocessError, ValueError, json.JSONDecodeError):
+        raise SystemExit(1)

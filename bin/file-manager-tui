@@ -1,0 +1,22 @@
+#!/bin/sh
+# Dedicated readable terminal settings for MC; DWM controls window placement.
+if [ "$#" -eq 0 ]; then
+    removable_path=$("$HOME/.local/bin/mc-removable-path" 2>/dev/null || :)
+    if [ -n "$removable_path" ] && [ -d "$removable_path" ]; then
+        set -- "$HOME" "$removable_path"
+    else
+        set -- "$HOME" "$HOME"
+    fi
+fi
+set -- +j +sb -name midnight-commander -title 'Files — Midnight Commander' \
+    -sl 0 -b 8 \
+    -fn 'xft:Noto Sans Mono:style=Regular:size=14:antialias=true:hinting=true' \
+    -fb 'xft:Noto Sans Mono:style=Bold:size=14:antialias=true:hinting=true' \
+    -fi 'xft:Noto Sans Mono:style=Regular:size=14:antialias=true:hinting=true' \
+    -fbi 'xft:Noto Sans Mono:style=Bold:size=14:antialias=true:hinting=true' \
+    -xrm 'midnight-commander*lineSpace: 2' \
+    -e "$HOME/.local/bin/mc" --nosubshell "$@"
+if command -v urxvtc >/dev/null 2>&1 && urxvtc "$@"; then
+    exit 0
+fi
+exec /usr/bin/urxvt "$@"

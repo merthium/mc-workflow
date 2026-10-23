@@ -1,0 +1,35 @@
+#!/bin/sh
+# Keep MC's interface in English while retaining Unicode filename support.
+export LC_ALL=en_US.UTF-8
+export LANGUAGE=en
+export EDITOR=nvim
+export VISUAL=nvim
+
+# Information commands and the standalone editor/viewer need no file-manager bar.
+for arg do
+    case "$arg" in
+        -h|--help|--help-*|-V|--version|-f|--datadir|-F|--datadir-info|--configure-options|-e|--edit|-v|--view|--view=*)
+            exec /usr/bin/mc "$@"
+            ;;
+    esac
+done
+
+# Older MC windows can save their cached internal-editor setting on exit.
+# Reassert the chosen editor before each new file-manager session.
+/usr/bin/python3 "$HOME/.local/libexec/mc-ensure-settings.py"
+if [ -f "$HOME/.config/mc/ini" ]; then
+    sed -i 's/^use_internal_edit=true$/use_internal_edit=false/' "$HOME/.config/mc/ini"
+fi
+
+if [ -t 0 ] && [ -t 1 ] && [ -x /usr/bin/tmux ]; then
+    # One private server per MC window; it exits with MC.
+    unset TMUX
+    runner=/usr/bin/mc
+    if [ -x "$HOME/.local/libexec/mc-preview/mc" ] && [ -x "$HOME/.local/libexec/mc-preview/renderer" ] && [ -x "$HOME/.local/libexec/mc-preview/run.py" ]; then
+        runner="$HOME/.local/libexec/mc-preview/run.py"
+    fi
+    exec /usr/bin/tmux -u -L "mc-ui-$$" \
+        -f "$HOME/.config/mc/shortcuts.tmux.conf" \
+        new-session -s files -- "$runner" "$@"
+fi
+exec /usr/bin/mc "$@"

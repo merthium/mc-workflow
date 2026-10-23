@@ -1,0 +1,18 @@
+shell_patterns=0
+
+# BEGIN mc-workflow actions
+p       Copy selected absolute paths to clipboard
+        cd %d || exit 1
+        "$HOME/.local/bin/mc-tools" paths -- %s
+
+j       Pack selected files into a new tar.gz archive
+        cd %d || exit 1
+        "$HOME/.local/bin/mc-tools" pack -- %s
+
+k       Compare selected files with the other panel (SHA256)
+        cd %d || exit 1
+        %view{ascii} "$HOME/.local/bin/mc-tools" compare --other %D -- %s
+
+l       Open a terminal in this directory
+        "$HOME/.local/bin/mc-tools" terminal %d
+# END mc-workflow actions

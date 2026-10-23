@@ -1,0 +1,71 @@
+# Plain-letter actions in the file manager; dialogs retain normal text entry.
+[filemanager]
+ChangePanel = tab; ctrl-i; alt-tab
+HotList = b; ctrl-backslash
+Help = h
+Copy = c
+Move = m
+MakeDir = n
+Delete = d
+View = v
+Edit = e; f4
+Find = f
+Menu = space
+Quit = f10; esc
+SaveSetup = f20
+QuitQuiet =
+PanelQuickView =
+ShowHidden = dot
+Reread = ctrl-r
+
+[panel]
+# Hand these keys to the file manager instead of starting filename search.
+HotList = b; ctrl-backslash
+Help = h
+Copy = c
+Move = m
+MakeDir = n
+Delete = d
+View = v
+Edit = e; f4
+Find = f
+Menu = space
+Quit = f10; esc
+ShowHidden = dot
+Enter = ctrl-right
+CdParent = ctrl-left; backspace
+MoveSingle = r
+Mark = s; insert; ctrl-t
+Left = left
+Right = right
+Up = up; ctrl-p
+Down = down; ctrl-n
+Top = home; ctrl-home
+Bottom = end; ctrl-end
+PageUp = pgup
+PageDown = pgdn
+Search = slash; ctrl-s
+
+[menu]
+# Space opens the menu; q closes only the open menu.
+Quit = q; f10; esc; ctrl-g
+
+# The terminal definition maps physical Tab to MC's completion key.
+[input]
+Complete = alt-tab; ctrl-space
+
+# On buttons, Tab still advances; use Shift+Tab or arrows to leave inputs.
+[dialog]
+Down = right; down; alt-tab
+
+# Retain normal Tab actions in MC's other screens.
+[editor]
+Tab = tab; shift-tab; ctrl-tab; ctrl-shift-tab; alt-tab
+Complete = ctrl-space
+
+[help]
+LinkNext = tab; alt-tab
+LinkPrev = shift-tab
+
+[viewer]
+ToggleNavigation = tab; alt-tab

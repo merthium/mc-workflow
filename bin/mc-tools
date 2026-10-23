@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""Small local-file actions for Midnight Commander's user menu."""
+import argparse
+from datetime import datetime
+import hashlib
+import os
+from pathlib import Path
+import shlex
+import shutil
+import stat
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+
+def selected(names):
+    root = Path.cwd()
+    result = []
+    for name in names:
+        path = Path(os.path.abspath(name))
+        if path.parent != root or name in ('.', '..'):
+            raise ValueError('Select entries in the current local directory, not the directory itself.')
+        path.lstat()
+        if path not in result:
+            result.append(path)
+    if not result:
+        raise ValueError('Select at least one file.')
+    return result
+
+
+def paths_action(args):
+    text = '\n'.join(shlex.quote(str(p)) for p in selected(args.files)) + '\n'
+    if args.print:
+        print(text, end='')
+        return 0
+    choices = []
+    if os.environ.get('WAYLAND_DISPLAY'):
+        choices.append(['wl-copy'])
+    if os.environ.get('DISPLAY'):
+        choices.extend([['xsel', '--clipboard', '--input'], ['xclip', '-selection', 'clipboard']])
+    command = next((c for c in choices if shutil.which(c[0])), None)
+    if not command:
+        raise ValueError('No clipboard tool found; install xsel/xclip, or use paths --print.')
+    subprocess.run(command, input=text, text=True, check=True, timeout=10)
+    print('Copied shell-quoted absolute paths to the clipboard.')
+    return 0
+
+
+def archive_filter(info):
+    if not (info.isfile() or info.isdir() or info.issym() or info.islnk()):
+        raise ValueError('Special files cannot be archived: ' + info.name)
+    return info
+
+
+def pack_action(args):
+    sources = selected(args.files)
+    output = Path(args.output or ('selection-' + datetime.now().strftime('%Y%m%d-%H%M%S') + '.tar.gz'))
+    output = Path(os.path.abspath(output))
+    if output.parent != Path.cwd() or not output.name.endswith('.tar.gz'):
+        raise ValueError('Archive output must be a .tar.gz file in the current directory.')
+    if output.exists() or output.is_symlink():
+        raise ValueError('Archive already exists; choose another name: ' + output.name)
+    for source in sources:
+        mode = source.lstat().st_mode
+        if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode) or stat.S_ISLNK(mode)):
+            raise ValueError('Special files cannot be archived: ' + source.name)
+    fd, temporary = tempfile.mkstemp(prefix='.mc-pack-', dir=output.parent)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            with tarfile.open(fileobj=stream, mode='w:gz', dereference=False) as archive:
+                for source in sources:
+                    archive.add(source, arcname=source.name, filter=archive_filter)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Atomic publication with no overwrite, including concurrent invocations.
+        os.link(temporary, output)
+    finally:
+        os.unlink(temporary)
+    print('Created ' + output.name + '; original files kept.')
+    return 0
+
+
+def digest(path):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError('Not a regular file: ' + str(path))
+        result = hashlib.file_digest(stream, 'sha256').hexdigest()
+        after = os.fstat(stream.fileno())
+        if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError('File changed during comparison: ' + str(path))
+        return result
+
+
+def compare_action(args):
+    other = Path(args.other)
+    if not other.is_dir():
+        raise ValueError('The other panel must be a local directory.')
+    failed = False
+    for source in selected(args.files):
+        target = other / source.name
+        if not stat.S_ISREG(source.lstat().st_mode):
+            label = 'SKIPPED (not a regular file)'
+        elif not target.exists() and not target.is_symlink():
+            label = 'MISSING'
+        elif not stat.S_ISREG(target.lstat().st_mode):
+            label = 'SKIPPED (destination is not a regular file)'
+        else:
+            label = 'SAME' if digest(source) == digest(target) else 'DIFFERENT'
+        failed |= label != 'SAME'
+        print(label + '  ' + shlex.quote(source.name))
+    return int(failed)
+
+
+def terminal_action(args):
+    directory = Path(args.directory).resolve(strict=True)
+    if not directory.is_dir():
+        raise ValueError('Choose a local directory.')
+    command = next((c for c in [['urxvtc', '+j'], ['urxvt', '+j'], ['x-terminal-emulator'], ['xterm']] if shutil.which(c[0])), None)
+    if not command:
+        raise ValueError('No terminal found (urxvt, xterm or x-terminal-emulator).')
+    if command[0] == 'urxvtc':
+        result = subprocess.run(command, cwd=directory, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+        if result.returncode == 0:
+            return 0
+        command = ['urxvt', '+j']
+    subprocess.Popen(command, cwd=directory, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    actions = parser.add_subparsers(dest='action', required=True)
+    for name, handler in [('paths', paths_action), ('pack', pack_action), ('compare', compare_action)]:
+        sub = actions.add_parser(name)
+        sub.add_argument('files', nargs='+')
+        if name == 'paths': sub.add_argument('--print', action='store_true')
+        if name == 'pack': sub.add_argument('--output')
+        if name == 'compare': sub.add_argument('--other', required=True)
+        sub.set_defaults(handler=handler)
+    sub = actions.add_parser('terminal')
+    sub.add_argument('directory', nargs='?', default='.')
+    sub.set_defaults(handler=terminal_action)
+    args = parser.parse_args()
+    try:
+        return args.handler(args)
+    except (OSError, ValueError, subprocess.SubprocessError, tarfile.TarError) as error:
+        print('mc-tools: ' + str(error), file=sys.stderr)
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
