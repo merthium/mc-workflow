@@ -7,7 +7,7 @@ My Midnight Commander integration for Void Linux and dwm: a dedicated urxvt wind
 ## Improvements
 
 - Copy selected absolute paths to the clipboard, quoted for use in a shell.
-- Pack selected files/directories into a timestamped `.tar.gz`, keeping originals and refusing to overwrite an existing archive.
+- Pack selected files/directories into a timestamped `.tar.gz`, keeping originals and refusing to overwrite an existing archive, including on filesystems without hardlinks.
 - Compare selected regular files against same-named files in the other panel using SHA-256.
 - Open a terminal in the current local directory.
 - Reach MC's native directory hotlist with `B`.

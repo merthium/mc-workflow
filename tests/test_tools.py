@@ -119,4 +119,18 @@ class ToolsTest(unittest.TestCase):
         self.assertEqual(list(self.left.glob('.mc-pack-*')),[])
 
 
+    def test_pack_on_filesystem_without_hardlinks(self):
+        (self.left/'data.txt').write_bytes(b'USB data')
+        runner = ('import errno,os,runpy,sys; '
+                  'from unittest.mock import patch; '
+                  'sys.argv=[sys.argv[1],"pack","--output","usb.tar.gz","--","data.txt"]; '
+                  'scope=patch("os.link",side_effect=OSError(errno.EPERM,"hardlinks unsupported")); '
+                  'scope.start(); runpy.run_path(sys.argv[0],run_name="__main__")')
+        result=subprocess.run([sys.executable,'-c',runner,str(SCRIPT)],cwd=self.left,capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        with tarfile.open(self.left/'usb.tar.gz') as archive:
+            self.assertEqual(archive.extractfile('data.txt').read(),b'USB data')
+        self.assertEqual(list(self.left.glob('.mc-pack-*')),[])
+
+
 if __name__=='__main__': unittest.main()

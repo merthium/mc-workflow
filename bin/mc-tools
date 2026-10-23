@@ -2,6 +2,7 @@
 """Small local-file actions for Midnight Commander's user menu."""
 import argparse
 from datetime import datetime
+import errno
 import hashlib
 import os
 from pathlib import Path
@@ -74,7 +75,21 @@ def pack_action(args):
             stream.flush()
             os.fsync(stream.fileno())
         # Atomic publication with no overwrite, including concurrent invocations.
-        os.link(temporary, output)
+        try:
+            os.link(temporary, output)
+        except OSError as error:
+            if error.errno not in (errno.EPERM, errno.EOPNOTSUPP, errno.EXDEV):
+                raise
+            # FAT/exFAT have no hardlinks. Reserve the name before copying.
+            destination = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                with os.fdopen(destination, 'wb') as target, open(temporary, 'rb') as source:
+                    shutil.copyfileobj(source, target)
+                    target.flush()
+                    os.fsync(target.fileno())
+            except BaseException:
+                output.unlink(missing_ok=True)
+                raise
     finally:
         os.unlink(temporary)
     print('Created ' + output.name + '; original files kept.')
