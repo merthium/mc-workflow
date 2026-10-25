@@ -1,17 +1,17 @@
-# Plain-letter actions in the file manager; dialogs retain normal text entry.
+# Letter shortcuts plus standard function keys; dialogs retain normal text entry.
 [filemanager]
 ChangePanel = tab; ctrl-i; alt-tab
 HotList = b; ctrl-backslash
-Help = h
-Copy = c
-Move = m
-MakeDir = n
-Delete = d
-View = v
+Help = h; f1
+Copy = c; f5
+Move = m; f6
+MakeDir = n; f7
+Delete = d; f8
+View = v; f3
 Edit = e; f4
 Find = f
-Menu = space
-Quit = f10; esc
+Menu = space; f9
+Quit = f10
 SaveSetup = f20
 QuitQuiet =
 PanelQuickView =
@@ -21,18 +21,18 @@ Reread = ctrl-r
 [panel]
 # Hand these keys to the file manager instead of starting filename search.
 HotList = b; ctrl-backslash
-Help = h
-Copy = c
-Move = m
-MakeDir = n
-Delete = d
-View = v
+Help = h; f1
+Copy = c; f5
+Move = m; f6
+MakeDir = n; f7
+Delete = d; f8
+View = v; f3
 Edit = e; f4
 Find = f
-Menu = space
-Quit = f10; esc
+Menu = space; f9
+Quit = f10
 ShowHidden = dot
-Enter = ctrl-right
+Enter = enter; ctrl-right
 CdParent = ctrl-left; backspace
 MoveSingle = r
 Mark = s; insert; ctrl-t

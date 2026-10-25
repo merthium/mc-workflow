@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep MC's Tab completion enabled after older sessions save cached settings."""
+"""Keep MC's navigation controls and Tab completion after older sessions save settings."""
 from pathlib import Path
 import re
 
@@ -10,6 +10,9 @@ if path.is_file():
     for section, key, value in [
         ('Midnight-Commander', 'show_all_if_ambiguous', 'true'),
         ('terminal:general', 'complete', '^i'),
+        ('Layout', 'menubar_visible', 'true'),
+        ('Layout', 'keybar_visible', 'false'),
+        ('Midnight-Commander', 'old_esc_mode_timeout', '200000'),
     ]:
         pattern = rf'(?ms)^\[{re.escape(section)}\]\n(.*?)(?=^\[|\Z)'
         match = re.search(pattern, text)

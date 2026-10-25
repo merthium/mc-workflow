@@ -2,8 +2,6 @@
 
 My Midnight Commander integration for Void Linux and dwm: a dedicated urxvt window, Neovim editing, a clickable tmux shortcut bar and small file actions.
 
-![Midnight Commander with example folders](assets/workflow.png)
-
 ## Improvements
 
 - Copy selected absolute paths to the clipboard, quoted for use in a shell.
@@ -16,8 +14,14 @@ My Midnight Commander integration for Void Linux and dwm: a dedicated urxvt wind
 
 ## Keys
 
+The menu bar stays visible. Two clickable footer rows show explicit F1–F10 action labels and navigation shortcuts; the native numeric-only keybar is hidden. F2 opens file actions; F9 opens the main menu. Copy and move send the selected files to the other panel; the confirmation dialog lets you change the destination.
+
 | Keys | Action |
 | --- | --- |
+| `Enter` / `Backspace` | Open the highlighted entry / go to the parent directory |
+| `Left` / `Right` | Switch panels in the supplied layout |
+| `F5` / `F6` / `F7` / `F8` | Copy / move / new directory / delete |
+| `F9` / `F10` | Menu / quit |
 | `F2`, then `P` | Copy selected paths |
 | `F2`, then `J` | Archive selected entries |
 | `F2`, then `K` | Compare with the other panel |
@@ -30,7 +34,7 @@ My Midnight Commander integration for Void Linux and dwm: a dedicated urxvt wind
 | `.` | Show hidden files |
 | `Ctrl+Left` / `Ctrl+Right` | Parent / open directory |
 
-Letters are pressed without Shift. With no marked files, actions use the highlighted entry. The `..` row is rejected. F2 is the action menu; Space opens the normal MC menu bar. Directory-local `.mc.menu` files take precedence over the user action menu.
+Letters are pressed without Shift. With no marked files, actions use the highlighted entry. The `..` row is rejected. F2 is the action menu; Space or F9 opens the normal MC menu bar. Escape closes menus and dialogs without quitting the file manager. Tab retains filename completion in input fields; use Shift+Tab or arrows to leave an input. Directory-local `.mc.menu` files take precedence over the user action menu.
 
 The helpers operate on local files. Comparison reports `SAME`, `DIFFERENT`, `MISSING` or `SKIPPED`; it does not synchronize, delete or overwrite anything. Symlinks and directories are skipped for comparison. Archives retain symlinks without following their targets and reject special files. Large archives and hashes run in the foreground; wait for completion before closing MC.
 
